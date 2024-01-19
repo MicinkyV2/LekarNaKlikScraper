@@ -5,6 +5,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 	try {
         // add stealth plugin and use defaults (all evasion techniques)
         puppeteer.use(StealthPlugin())
+        puppeteer.use(require("puppeteer-extra-plugin-minmax")());
 
 		// Launch the browser
 		const browser = await puppeteer.launch({
@@ -50,7 +51,13 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
             currentPageNumber++;
         }
 
-        console.log(doctors);
+        const doctorDetails = [];
+        for (const doctor of doctors) {
+            const doctorDetail = await getDoctorDetails(page, doctor);
+            doctorDetails.push(doctorDetail);
+        }
+
+        console.log(JSON.stringify(doctorDetails, null, 2));
 
 		// Close the browser
 		await browser.close();
@@ -60,6 +67,7 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 })();
 
 async function getDoctorsFromPage(page) {
+    console.log("Getting doctors from page...");
     const result = await page.evaluate(() => {
         const items = Array.from(document.querySelectorAll(".seznam-lekaru > .item:not(.table-head)"));
         return items.map(item => {
@@ -77,14 +85,11 @@ async function goToNextPage(page, currentPageNumber) {
     const nextPageNumber = currentPageNumber + 1;
     const nextPageLinkSelector = `a[href="/seznam-lekaru?paging.pageNo=${nextPageNumber}"]`;
 
-    console.log(`Checking for next page link: ${nextPageLinkSelector}`);
-
     // Check if the next page link exists
     const nextPageLink = await page.$(nextPageLinkSelector);
 
-    console.log(`Next page link: ${nextPageLink}`);
-
     if (nextPageLink) {
+        console.log(`Navigating to page ${nextPageNumber}`);
         // If the next page link exists, click it and wait for navigation
         await Promise.all([
             nextPageLink.click(),
@@ -106,5 +111,64 @@ async function verifyCaptcha(page) {
     const searchButton = await page.$(".btn-submit");
     await searchButton.click();
 
+    console.log("Waiting for captcha verification...");
     await page.waitForNavigation();
+}
+
+async function getDoctorDetails(page, doctor) {
+    console.log(`Getting details for doctor: ${doctor.name}`)
+    await page.goto(doctor.link);
+
+    let success = await verifyCaptchaDetails(page);
+    while(!success) {
+        await page.goto(doctor.link);
+        success = await verifyCaptchaDetails(page);
+    }
+
+    const doctorDetails = await page.evaluate(() => {
+        const name = document.querySelector('.jmeno-lekare').innerText;
+        const evidencniCislo = document.querySelector('.evidencni-cislo b').innerText;
+        const workplacesElements = Array.from(document.querySelectorAll('.text-box-lekar'));
+    
+        const workplaces = workplacesElements.filter(workplace => {
+            const h3 = workplace.querySelector('h3');
+            return h3 && h3.innerText.includes('PRACOVIŠTĚ');
+        }).map(workplace => {
+            const table = workplace.querySelector('table.data');
+            if (!table) return null;
+            const trElements = Array.from(table.querySelectorAll('tr'));
+    
+            const details = trElements.map(tr => {
+                const td = tr.querySelector('td:nth-child(2)');
+                console.log(`td innerText: ${td.innerText}`);
+                return td.innerText;
+            });
+    
+            return {
+                name: details[0],
+                department: details[1],
+                address: details[2]
+            };
+        }).filter(workplace => workplace !== null);
+    
+        return { name, evidencniCislo, workplaces };
+    });
+    
+    return doctorDetails;
+}
+
+async function verifyCaptchaDetails(page) {
+    const doctorDetails = await page.$(".detail-lekare");
+    if(doctorDetails) {
+        return true;
+    }
+
+    const searchButton = await page.$(".btn-submit");
+    await searchButton.click();
+
+    console.log("Waiting for captcha verification...");
+    await page.maximize();
+    await page.waitForNavigation();
+    await page.minimize();
+    return false;
 }

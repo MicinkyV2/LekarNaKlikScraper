@@ -11,6 +11,9 @@ dependencies:
   puppeteer-extra:
     specifier: ^3.3.6
     version: 3.3.6(puppeteer@21.7.0)
+  puppeteer-extra-plugin-minmax:
+    specifier: ^1.1.2
+    version: 1.1.2(puppeteer-extra@3.3.6)
   puppeteer-extra-plugin-stealth:
     specifier: ^2.11.2
     version: 2.11.2(puppeteer-extra@3.3.6)
@@ -756,6 +759,16 @@ packages:
       - encoding
       - supports-color
       - utf-8-validate
+    dev: false
+
+  /puppeteer-extra-plugin-minmax@1.1.2(puppeteer-extra@3.3.6):
+    resolution: {integrity: sha512-VqKNkutR/Ynn8eCwbPIxRISYH6/nSOcF/ApIgjVPbMrvIfQxRMu+LZUmb/HIc87yFACm0Qd/Yhku4dgVq4rDxQ==}
+    dependencies:
+      puppeteer-extra-plugin: 3.2.3(puppeteer-extra@3.3.6)
+    transitivePeerDependencies:
+      - playwright-extra
+      - puppeteer-extra
+      - supports-color
     dev: false
 
   /puppeteer-extra-plugin-stealth@2.11.2(puppeteer-extra@3.3.6):
