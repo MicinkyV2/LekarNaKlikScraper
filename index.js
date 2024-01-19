@@ -156,7 +156,9 @@ async function verifyCaptcha(page) {
     await searchButton.click();
 
     console.log("Waiting for captcha verification...");
-    await page.waitForNavigation();
+    await page.waitForNavigation({
+        timeout: 0,
+    });
 }
 
 async function getDoctorDetails(page, doctor) {
@@ -212,7 +214,9 @@ async function verifyCaptchaDetails(page) {
 
     console.log("Waiting for captcha verification...");
     await page.maximize();
-    await page.waitForNavigation();
+    await page.waitForNavigation({
+        timeout: 0,
+    });
     await page.minimize();
     return false;
 }
