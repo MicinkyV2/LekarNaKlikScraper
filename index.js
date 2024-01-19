@@ -1,5 +1,9 @@
+const fs = require("fs");
 const puppeteer = require("puppeteer-extra");
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
+const { Parser } = require('@json2csv/plainjs');
+
+const CSV_FOLDER = './csv';
 
 (async () => {
 	try {
@@ -23,14 +27,39 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
         const cookieButton = await page.waitForSelector(".cc-nb-okagree");
         await cookieButton.click();
         
-        // select gastroenterologie in #filterObor
-        await page.select("#filterObor", "37");
+        const readline = require('readline').createInterface({
+            input: process.stdin,
+            output: process.stdout
+        });
+        
+        // Get the options of the select boxes
+        const oborOptions = await page.evaluate(() => Array.from(document.querySelector('#filterObor').options, option => ({ text: option.text, value: option.value })));
+        const krajIdOptions = await page.evaluate(() => Array.from(document.querySelector('#filterKrajId').options, option => ({ text: option.text, value: option.value })));
+
+        await page.minimize();
+
+        // Present the options to the console user and let them choose
+        console.log('Obor options:');
+        oborOptions.forEach((option, index) => console.log(`${index + 1} - ${option.text}`));
+        let oborChoice = await new Promise(resolve => readline.question('Choose an obor option by number: ', resolve));
+
+        console.log('KrajId options:');
+        krajIdOptions.forEach((option, index) => console.log(`${index + 1} - ${option.text}`));
+        let krajIdChoice = await new Promise(resolve => readline.question('Choose a krajId option by number: ', resolve));
+
+        await page.maximize();
+        readline.close();
+
+        // Pass the choices to the page
+        const oborOptionValue = oborOptions[oborChoice - 1].value;
+        await page.select('#filterObor', oborOptionValue);
 
         await page.waitForNavigation({
             timeout: 0,
         });
 
-        await page.select("#filterKrajId", "6");
+        const krajIdOptionValue = krajIdOptions[krajIdChoice - 1].value;
+        await page.select('#filterKrajId', krajIdOptionValue);
 
         await page.waitForNavigation({
             timeout: 0,
@@ -51,13 +80,28 @@ const StealthPlugin = require('puppeteer-extra-plugin-stealth');
             currentPageNumber++;
         }
 
+        await page.minimize();
+
         const doctorDetails = [];
         for (const doctor of doctors) {
             const doctorDetail = await getDoctorDetails(page, doctor);
             doctorDetails.push(doctorDetail);
         }
 
-        console.log(JSON.stringify(doctorDetails, null, 2));
+        const oborOptionText = oborOptions[oborChoice - 1].text;
+        const krajIdOptionText = krajIdOptions[krajIdChoice - 1].text;
+
+        const csv = await detailsToCsv(doctorDetails);
+
+        if (!fs.existsSync(CSV_FOLDER)) {
+            fs.mkdirSync(CSV_FOLDER);
+        }
+
+        const fileName = `${oborOptionText}_${krajIdOptionText}.csv`;
+        fs.writeFile(`${CSV_FOLDER}/${fileName}`, csv, function (err) {
+            if (err) return console.log(err);
+            console.log(`Saved to ${fileName}`);
+        });
 
 		// Close the browser
 		await browser.close();
@@ -171,4 +215,27 @@ async function verifyCaptchaDetails(page) {
     await page.waitForNavigation();
     await page.minimize();
     return false;
+}
+
+async function detailsToCsv(doctorDetails) {
+    const fields = ['name', 'registrationNumber', 'workplaceName', 'workplaceDepartment', 'workplaceAddress'];
+    const opts = { fields };
+
+    // Flatten the doctorDetails object
+    const flattenedDetails = doctorDetails.map(doctorDetail => {
+        const { name, evidencniCislo, workplaces } = doctorDetail;
+        return workplaces.map(workplace => {
+            const { name: workplaceName, department: workplaceDepartment, address: workplaceAddress } = workplace;
+            return { name, registrationNumber: evidencniCislo, workplaceName, workplaceDepartment, workplaceAddress };
+        });
+    }).flat();
+
+    try {
+        const parser = new Parser(opts);
+        const csv = parser.parse(flattenedDetails);
+        return csv;
+    }
+    catch (err) {
+        console.error(err);
+    }
 }

@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@json2csv/plainjs':
+    specifier: ^7.0.4
+    version: 7.0.4
   puppeteer:
     specifier: ^21.7.0
     version: 21.7.0
@@ -42,6 +45,17 @@ packages:
       js-tokens: 4.0.0
     dev: false
 
+  /@json2csv/formatters@7.0.4:
+    resolution: {integrity: sha512-qdlLx0Pk/+BQnu6zreLgGrdLyUzLNVdsyCUU/+2aduHg4zemVo/e0iWjPk1sy/QZXXh+1RXBe+IiP9eDyj95qg==}
+    dev: false
+
+  /@json2csv/plainjs@7.0.4:
+    resolution: {integrity: sha512-IHLyosebSdXMtVKusHHGqvp8mCpEkVk0Qvc0lAGcdAYdvO8lBvry8o665+CX78uPj/QZBhu+s0cOWyxanxlrQw==}
+    dependencies:
+      '@json2csv/formatters': 7.0.4
+      '@streamparser/json': 0.0.17
+    dev: false
+
   /@puppeteer/browsers@1.9.1:
     resolution: {integrity: sha512-PuvK6xZzGhKPvlx3fpfdM2kYY3P/hB1URtK8wA7XUJ6prn6pp22zvJHu48th0SGcHL9SutbPHrFuQgfXTFobWA==}
     engines: {node: '>=16.3.0'}
@@ -56,6 +70,10 @@ packages:
       yargs: 17.7.2
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /@streamparser/json@0.0.17:
+    resolution: {integrity: sha512-mW54K6CTVJVLwXRB6kSS1xGWPmtTuXAStWnlvtesmcySgtop+eFPWOywBFPpJO4UD173epYsPSP6HSW8kuqN8w==}
     dev: false
 
   /@tootallnate/quickjs-emscripten@0.23.0:
